@@ -14,8 +14,8 @@ COPY . .
 # Build with Vite
 RUN npm run build
 
-# Install nginx to act as a reverse proxy
-RUN apk add --no-cache nginx
+# Install nginx and gettext (for envsubst) to act as a reverse proxy
+RUN apk add --no-cache nginx gettext
 
 # Create nginx config that proxies API calls to your Qdrant instance
 RUN mkdir -p /etc/nginx/conf.d
@@ -89,9 +89,15 @@ EOF
 RUN cat > /app/start.sh << 'EOF'
 #!/bin/sh
 
+echo "Starting with QDRANT_URL: $QDRANT_URL"
+echo "Starting with QDRANT_API_KEY: $QDRANT_API_KEY"
+
 # Replace environment variables in nginx config
 envsubst '$QDRANT_URL $QDRANT_API_KEY' < /etc/nginx/conf.d/default.conf > /tmp/nginx.conf
 mv /tmp/nginx.conf /etc/nginx/conf.d/default.conf
+
+echo "Nginx config updated, starting nginx..."
+cat /etc/nginx/conf.d/default.conf
 
 # Start nginx
 exec nginx -g 'daemon off;'
