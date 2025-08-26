@@ -2,17 +2,20 @@ services:
   qdrant:
     image: qdrant/qdrant:latest
     ports:
-      - "6333:6333"  # Enable this for built-in dashboard
+      - "6333:6333"
     environment:
       QDRANT__SERVICE__API_KEY: ${QDRANT__SERVICE__API_KEY}
     volumes:
-      - ./qdrant_data:/qdrant/storage
+      - qdrant_data:/qdrant/storage
 
   qdrant-web-ui:
-    image: qdrant/qdrant-web-ui:latest
+    build: .  # This will use your Dockerfile
     ports:
-      - "3000:80"
+      - "3000:3000"
     environment:
-      QDRANT_API_URL: http://qdrant:6333
+      REACT_APP_QDRANT_URL: http://qdrant:6333
     depends_on:
       - qdrant
+
+volumes:
+  qdrant_data:
