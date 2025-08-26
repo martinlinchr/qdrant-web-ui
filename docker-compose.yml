@@ -1,21 +1,25 @@
 services:
   qdrant:
     image: qdrant/qdrant:latest
-    ports:
-      - "6333:6333"
     environment:
       QDRANT__SERVICE__API_KEY: ${QDRANT__SERVICE__API_KEY}
     volumes:
       - qdrant_data:/qdrant/storage
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.qdrant.rule=Host(`qdrant.yourdomain.com`)"
+      - "traefik.http.services.qdrant.loadbalancer.server.port=6333"
 
   qdrant-web-ui:
-    build: .  # This will use your Dockerfile
-    ports:
-      - "3000:3000"
+    build: .
     environment:
-      REACT_APP_QDRANT_URL: http://qdrant:6333
+      REACT_APP_QDRANT_URL: https://qdrant.yourdomain.com  # Point to your Qdrant via Traefik
     depends_on:
       - qdrant
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.qdrant-ui.rule=Host(`qdrant-ui.yourdomain.com`)"
+      - "traefik.http.services.qdrant-ui.loadbalancer.server.port=3000"
 
 volumes:
   qdrant_data:
