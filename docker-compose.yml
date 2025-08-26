@@ -5,21 +5,17 @@ services:
       QDRANT__SERVICE__API_KEY: ${QDRANT__SERVICE__API_KEY}
     volumes:
       - qdrant_data:/qdrant/storage
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.qdrant.rule=Host(`qdrant.martin-linde.com`)"
-      - "traefik.http.services.qdrant.loadbalancer.server.port=6333"
 
   qdrant-web-ui:
     build: .
     environment:
-      REACT_APP_QDRANT_URL: https://qdrant.martin-linde.com  # Point to your Qdrant via Traefik
+      # The key fix - point to the DATABASE, not the UI
+      REACT_APP_QDRANT_URL: https://qdrant.martin-linde.com
+      # Also try these if the above doesn't work:
+      # VITE_QDRANT_URL: https://qdrant.martin-linde.com
+      # QDRANT_API_URL: https://qdrant.martin-linde.com
     depends_on:
       - qdrant
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.qdrant-ui.rule=Host(`qdrant-web-ui.martin-linde.com`)"
-      - "traefik.http.services.qdrant-ui.loadbalancer.server.port=3000"
 
 volumes:
   qdrant_data:
