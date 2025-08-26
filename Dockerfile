@@ -2,23 +2,23 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package files first for better Docker layer caching
+# Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install dependencies (including devDependencies needed for build)
+RUN npm ci
 
 # Copy source code
 COPY . .
 
-# Build the application
+# Build with Vite
 RUN npm run build
 
-# Install serve to host the built files
+# Install serve globally to host the built files
 RUN npm install -g serve
 
 # Expose port
 EXPOSE 3000
 
-# Start the application
-CMD ["serve", "-s", "build", "-l", "3000"]
+# Serve the built files from the dist directory (Vite default)
+CMD ["serve", "-s", "dist", "-l", "3000"]
