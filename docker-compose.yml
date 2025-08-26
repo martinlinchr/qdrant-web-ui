@@ -7,18 +7,18 @@ services:
       - qdrant_data:/qdrant/storage
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.qdrant.rule=Host(`qdrant.yourdomain.com`)"
+      - "traefik.http.routers.qdrant.rule=Host(`qdrant.martin-linde.com`)"
       - "traefik.http.services.qdrant.loadbalancer.server.port=6333"
 
   qdrant-web-ui:
     build: .
     environment:
-      REACT_APP_QDRANT_URL: https://qdrant.yourdomain.com  # Point to your Qdrant via Traefik
+      REACT_APP_QDRANT_URL: https://qdrant.martin-linde.com  # Point to your Qdrant via Traefik
     depends_on:
       - qdrant
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.qdrant-ui.rule=Host(`qdrant-ui.yourdomain.com`)"
+      - "traefik.http.routers.qdrant-ui.rule=Host(`qdrant-web-ui.martin-linde.com`)"
       - "traefik.http.services.qdrant-ui.loadbalancer.server.port=3000"
 
 volumes:
