@@ -17,69 +17,67 @@ RUN npm run build
 # Install nginx and gettext (for envsubst) to act as a reverse proxy
 RUN apk add --no-cache nginx gettext
 
-# Create nginx config that proxies API calls to your Qdrant instance
-RUN mkdir -p /etc/nginx/conf.d
-RUN cat > /etc/nginx/conf.d/default.conf << 'EOF'
-server {
-    listen 3000;
-    server_name localhost;
+# Create nginx main config
+RUN cat > /etc/nginx/nginx.conf << 'EOF'
+events {
+    worker_connections 1024;
+}
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
     
-    # Serve the built React app
-    location / {
-        root /app/dist;
-        try_files $uri $uri/ /index.html;
-    }
-    
-    # Proxy API calls to your Qdrant database
-    location /collections {
-        proxy_pass $QDRANT_URL;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header api-key $QDRANT_API_KEY;
-        add_header Access-Control-Allow-Origin *;
-        add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
-        add_header Access-Control-Allow-Headers "Content-Type, api-key, Authorization";
-    }
-    
-    location /cluster {
-        proxy_pass $QDRANT_URL;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header api-key $QDRANT_API_KEY;
-        add_header Access-Control-Allow-Origin *;
-        add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
-        add_header Access-Control-Allow-Headers "Content-Type, api-key, Authorization";
-    }
-    
-    location /telemetry {
-        proxy_pass $QDRANT_URL;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header api-key $QDRANT_API_KEY;
-        add_header Access-Control-Allow-Origin *;
-        add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
-        add_header Access-Control-Allow-Headers "Content-Type, api-key, Authorization";
-    }
-    
-    location /issues {
-        proxy_pass $QDRANT_URL;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header api-key $QDRANT_API_KEY;
-        add_header Access-Control-Allow-Origin *;
-        add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
-        add_header Access-Control-Allow-Headers "Content-Type, api-key, Authorization";
-    }
-    
-    # Handle preflight OPTIONS requests
-    location ~ ^/(collections|cluster|telemetry|issues) {
-        if ($request_method = 'OPTIONS') {
-            add_header Access-Control-Allow-Origin *;
-            add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
-            add_header Access-Control-Allow-Headers "Content-Type, api-key, Authorization";
-            add_header Content-Length 0;
-            add_header Content-Type text/plain;
-            return 200;
+    server {
+        listen 3000;
+        server_name localhost;
+        
+        # Serve the built React app
+        location / {
+            root /app/dist;
+            try_files $uri $uri/ /index.html;
+        }
+        
+        # Proxy API calls to your Qdrant database
+        location /collections {
+            proxy_pass $QDRANT_URL;
+            proxy_set_header Host qdrant.martin-linde.com;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header api-key $QDRANT_API_KEY;
+            proxy_ssl_verify off;
+        }
+        
+        location /cluster {
+            proxy_pass $QDRANT_URL;
+            proxy_set_header Host qdrant.martin-linde.com;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header api-key $QDRANT_API_KEY;
+            proxy_ssl_verify off;
+        }
+        
+        location /telemetry {
+            proxy_pass $QDRANT_URL;
+            proxy_set_header Host qdrant.martin-linde.com;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header api-key $QDRANT_API_KEY;
+            proxy_ssl_verify off;
+        }
+        
+        location /issues {
+            proxy_pass $QDRANT_URL;
+            proxy_set_header Host qdrant.martin-linde.com;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header api-key $QDRANT_API_KEY;
+            proxy_ssl_verify off;
+        }
+        
+        location ~ ^.*$ {
+            if ($request_uri ~ ^/(collections|cluster|telemetry|issues|snapshots)) {
+                proxy_pass $QDRANT_URL$request_uri;
+                proxy_set_header Host qdrant.martin-linde.com;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header api-key $QDRANT_API_KEY;
+                proxy_ssl_verify off;
+            }
         }
     }
 }
@@ -93,11 +91,10 @@ echo "Starting with QDRANT_URL: $QDRANT_URL"
 echo "Starting with QDRANT_API_KEY: $QDRANT_API_KEY"
 
 # Replace environment variables in nginx config
-envsubst '$QDRANT_URL $QDRANT_API_KEY' < /etc/nginx/conf.d/default.conf > /tmp/nginx.conf
-mv /tmp/nginx.conf /etc/nginx/conf.d/default.conf
+envsubst '$QDRANT_URL $QDRANT_API_KEY' < /etc/nginx/nginx.conf > /tmp/nginx.conf
+mv /tmp/nginx.conf /etc/nginx/nginx.conf
 
 echo "Nginx config updated, starting nginx..."
-cat /etc/nginx/conf.d/default.conf
 
 # Start nginx
 exec nginx -g 'daemon off;'
